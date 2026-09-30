@@ -3,63 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Bài thực hành frontend, Node.js API, EC2 và domain của Artium.">
-  <meta name="theme-color" content="#f5f6f2">
-  <title>Artium — Cloud Lab</title>
+  <title>Demo Node.js API</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./style.css">
   <script src="./config.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="./" aria-label="Artium Cloud Lab"><span class="brand-symbol" aria-hidden="true">a.</span> artium<span class="brand-divider"></span><span class="brand-detail">cloud lab</span></a>
-    <span class="lab-tag">Bài thực hành 01</span>
-  </header>
-
   <main>
-    <section class="intro" aria-labelledby="page-title">
-      <span class="eyebrow"><span class="small-dot" aria-hidden="true"></span> Một domain. Hai nơi triển khai.</span>
-      <h1 id="page-title">Từ trình duyệt,<br>đến <em>đám mây.</em></h1>
-      <p class="intro-text">Gửi một lời chào. Theo dõi request đi từ frontend đến API và nhận phản hồi thật từ Node.js.</p>
+    <h1>Demo Node.js API</h1>
+    <p>Frontend gửi request đến backend để kiểm tra kết nối và nhận lời chào.</p>
+    <p>API: <code id="api-url"></code></p>
+    <p id="environment-note"></p>
 
-      <div class="journey" aria-label="Luồng kết nối: trình duyệt đến frontend, rồi backend">
-        <div><span class="step-number">01</span><strong>Trình duyệt</strong><small>Bạn đang ở đây</small></div>
-        <span class="journey-arrow" aria-hidden="true">→</span>
-        <div><span class="step-number">02</span><strong>Frontend</strong><small>Vercel khi deploy</small></div>
-        <span class="journey-arrow" aria-hidden="true">→</span>
-        <div><span class="step-number">03</span><strong>Node.js API</strong><small>EC2 khi deploy</small></div>
-      </div>
-
-      <div class="endpoint-info"><span class="label">API đang sử dụng</span><code id="api-url"></code><p id="environment-note"></p></div>
+    <section aria-labelledby="connection-title">
+      <h2 id="connection-title">Kết nối</h2>
+      <p id="connection" data-state="idle" role="status"><span id="connection-text">Chưa kiểm tra</span></p>
+      <button id="check-button" type="button">Kiểm tra kết nối</button>
+      <p id="last-check">Chưa kiểm tra kết nối.</p>
     </section>
 
-    <section class="demo-shell" aria-labelledby="demo-title">
-      <div class="demo-card">
-        <div class="card-header"><div><span class="label">THỬ KẾT NỐI THẬT</span><h2 id="demo-title">Một lời chào từ server.</h2></div><span class="card-mark" aria-hidden="true">↗</span></div>
-        <div class="connection-row">
-          <span id="connection" class="connection" data-state="idle" role="status"><span class="status-dot" aria-hidden="true"></span><span id="connection-text">Chưa kiểm tra</span></span>
-          <button id="check-button" class="text-button" type="button">Kiểm tra kết nối <span aria-hidden="true">↻</span></button>
-        </div>
+    <section aria-labelledby="greeting-title">
+      <h2 id="greeting-title">Gửi lời chào</h2>
+      <form id="greeting-form">
+        <label for="name">Tên của bạn</label>
+        <input id="name" name="name" autocomplete="given-name" required maxlength="80" aria-describedby="name-hint">
+        <p id="name-hint">Tên chỉ dùng để tạo lời chào, không được lưu lại.</p>
+        <button id="send-button" type="submit"><span id="send-label">Gửi lời chào</span></button>
+      </form>
+    </section>
 
-        <form id="greeting-form">
-          <label for="name">Bạn tên gì?</label>
-          <input id="name" name="name" autocomplete="given-name" placeholder="Ví dụ: Thịnh" required maxlength="80" aria-describedby="name-hint">
-          <p id="name-hint" class="field-hint">Tên này chỉ dùng để tạo lời chào, không được lưu lại.</p>
-          <button id="send-button" class="primary-button" type="submit"><span id="send-label">Gửi lời chào</span><span class="button-icon" aria-hidden="true">↗</span></button>
-        </form>
-
-        <div class="response-shell">
-          <div class="response-panel">
-            <div class="response-heading"><span id="request-label">PHẢN HỒI API</span><span id="response-timing">—</span></div>
-            <p id="response-message" role="status">Phản hồi sẽ xuất hiện ở đây.</p>
-            <details><summary>Xem JSON trả về</summary><pre id="response-json">Chưa có dữ liệu.</pre></details>
-          </div>
-        </div>
-        <p class="last-check" id="last-check">Chưa kiểm tra kết nối.</p>
-      </div>
+    <section aria-labelledby="response-title">
+      <h2 id="response-title">Phản hồi</h2>
+      <p><code id="request-label">Chưa gửi request</code> — <span id="response-timing">—</span></p>
+      <p id="response-message" role="status">Phản hồi sẽ xuất hiện ở đây.</p>
+      <details>
+        <summary>Xem JSON trả về</summary>
+        <pre id="response-json">Chưa có dữ liệu.</pre>
+      </details>
     </section>
   </main>
-  <footer><span>ARTIUM / LEARN BY SHIPPING</span><span>Frontend + Backend · Một repository</span></footer>
 </body>
 </html>
