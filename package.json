@@ -1,0 +1,12 @@
+{
+  "name": "artium-cloud-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node --env-file-if-exists=backend/.env backend/server.mjs",
+    "dev": "node --watch --env-file-if-exists=backend/.env backend/server.mjs",
+    "test": "node backend/check.mjs"
+  }
+}

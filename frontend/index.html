@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo Node.js API</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./config.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main>
+    <h1>Demo Node.js API</h1>
+    <p>Frontend gửi request đến backend để kiểm tra kết nối và nhận lời chào.</p>
+    <p>API: <code id="api-url"></code></p>
+    <p id="environment-note"></p>
+
+    <section aria-labelledby="connection-title">
+      <h2 id="connection-title">Kết nối</h2>
+      <p id="connection" data-state="idle" role="status"><span id="connection-text">Chưa kiểm tra</span></p>
+      <button id="check-button" type="button">Kiểm tra kết nối</button>
+      <p id="last-check">Chưa kiểm tra kết nối.</p>
+    </section>
+
+    <section aria-labelledby="greeting-title">
+      <h2 id="greeting-title">Gửi lời chào</h2>
+      <form id="greeting-form">
+        <label for="name">Tên của bạn</label>
+        <input id="name" name="name" autocomplete="given-name" required maxlength="80" aria-describedby="name-hint">
+        <p id="name-hint">Tên chỉ dùng để tạo lời chào, không được lưu lại.</p>
+        <button id="send-button" type="submit"><span id="send-label">Gửi lời chào</span></button>
+      </form>
+    </section>
+
+    <section aria-labelledby="response-title">
+      <h2 id="response-title">Phản hồi</h2>
+      <p><code id="request-label">Chưa gửi request</code> — <span id="response-timing">—</span></p>
+      <p id="response-message" role="status">Phản hồi sẽ xuất hiện ở đây.</p>
+      <details>
+        <summary>Xem JSON trả về</summary>
+        <pre id="response-json">Chưa có dữ liệu.</pre>
+      </details>
+    </section>
+  </main>
+</body>
+</html>

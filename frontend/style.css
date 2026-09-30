@@ -1,0 +1,22 @@
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: sans-serif;
+  line-height: 1.5;
+  color: black;
+  background: white;
+}
+h1 { font-size: 24px; }
+h2 { font-size: 18px; }
+section { margin-top: 28px; }
+label { display: block; margin-bottom: 6px; }
+input { width: 100%; max-width: 320px; }
+input, button { font: inherit; padding: 6px 8px; }
+button { cursor: pointer; }
+button:disabled { cursor: wait; }
+code, pre { overflow-wrap: anywhere; }
+pre { white-space: pre-wrap; }
+summary { cursor: pointer; }

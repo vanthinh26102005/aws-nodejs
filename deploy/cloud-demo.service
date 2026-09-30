@@ -1,0 +1,16 @@
+[Unit]
+Description=Artium Node.js cloud demo
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/cloud-services-demo
+Environment=NODE_ENV=production
+ExecStart=/bin/bash -c '. /home/ubuntu/.nvm/nvm.sh && exec node --env-file-if-exists=backend/.env backend/server.mjs'
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
