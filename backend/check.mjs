@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
-import { server } from "./server.mjs";
+import { createDemoServer } from "./server.mjs";
+
+const server = createDemoServer({ bucket: "" });
 
 // Catches broken routes, unsafe input handling, and CORS failures between FE and BE.
 server.listen(0, "127.0.0.1");
@@ -21,6 +23,15 @@ try {
   assert.equal(health.status, 200, "Health endpoint must be available");
   assert.equal((await health.json()).status, "ok");
   assert.equal(health.headers.get("access-control-allow-origin"), origin);
+
+  // Missing S3 configuration must not break health/greeting or expose AWS errors.
+  const missingS3 = await fetch(`${base}/api/files`);
+  assert.equal(
+    missingS3.status,
+    503,
+    "Unconfigured S3 must give a useful API error",
+  );
+  assert.equal(typeof (await missingS3.json()).error, "string");
 
   const greeting = await post(JSON.stringify({ name: "  Thịnh  " }), {
     Origin: origin,
