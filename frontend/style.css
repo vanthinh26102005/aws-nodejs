@@ -20,3 +20,6 @@ button:disabled { cursor: wait; }
 code, pre { overflow-wrap: anywhere; }
 pre { white-space: pre-wrap; }
 summary { cursor: pointer; }
+#files-list { padding-left: 20px; }
+#files-list li { margin-bottom: 12px; overflow-wrap: anywhere; }
+#files-list button, #files-list a { margin-left: 8px; }

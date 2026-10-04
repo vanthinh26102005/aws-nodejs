@@ -1,13 +1,15 @@
 # Artium Cloud Lab
 
-Một folder để push lên một repo: backend Node.js trên EC2, frontend HTML/CSS/JS trên Vercel. Demo kiểm tra API và gửi tên để nhận lời chào. Không lưu tên, không có database, không cần npm install.
+Một folder để push lên một repo: backend Node.js trên EC2, frontend HTML/CSS/JS trên Vercel. Demo kiểm tra API, gửi tên để nhận lời chào và đọc file mẫu từ S3. Không lưu tên, không có database. Backend dùng AWS SDK để đọc S3 và tạo link có chữ ký; frontend vẫn là HTML/CSS/JS thuần.
 
 ```text
 cloud-services-demo/
 ├── package.json
+├── package-lock.json
 ├── backend/
 │   ├── server.mjs
 │   ├── check.mjs
+│   ├── check-s3.mjs
 │   └── .env.example
 ├── frontend/
 │   ├── index.html
@@ -25,6 +27,7 @@ cloud-services-demo/
 Cần Node.js 24 trở lên. Trong folder `cloud-services-demo`:
 
 ```bash
+npm ci
 npm start
 ```
 
@@ -43,7 +46,9 @@ npm run dev
 npm test
 ```
 
-`dev` tự khởi động lại backend khi code thay đổi; refresh trình duyệt để nhận FE mới. `test` dùng HTTP thật trên port tạm, kiểm tra API, JSON/tên sai, body quá lớn, CORS, method, đường dẫn và các asset frontend.
+`dev` tự khởi động lại backend khi code thay đổi; refresh trình duyệt để nhận FE mới. `test` dùng HTTP thật trên port tạm, kiểm tra API, JSON/tên sai, body quá lớn, CORS, method, đường dẫn và các asset frontend. Phần S3 thay lời gọi AWS bằng dữ liệu giả lập, kiểm tra giới hạn prefix, key sai, bucket rỗng, lỗi AWS và link được ký bằng AWS SDK. Test không cần AWS credentials và không chứng minh kết nối bucket thật.
+
+Local chưa có `S3_BUCKET` vẫn chạy lời chào bình thường; nút S3 báo chưa cấu hình. Muốn thử với S3 thật trên Mac cần cấu hình AWS credentials hợp lệ qua AWS CLI/profile. Trên EC2 dùng IAM role như phần S3 bên dưới.
 
 ## API
 
@@ -51,6 +56,8 @@ npm test
 | --- | --- | --- |
 | `GET /api/health` | Không có body | Trạng thái, phiên bản Node, uptime, timestamp |
 | `POST /api/greet` | JSON `{"name":"Thịnh"}` | Lời chào và timestamp |
+| `GET /api/files` | Không có body | Tối đa 10 file trong `demo/`, size, lastModified, truncated |
+| `GET /api/files/download?key=demo/ten-file.png` | Key URL-encoded | Link S3 có chữ ký, expiresIn = 300 giây |
 
 ```bash
 curl http://localhost:3000/api/health
@@ -87,6 +94,7 @@ Trong Terminal Ubuntu, sau khi clone:
 ```bash
 cd ~/cloud-services-demo
 cp backend/.env.example backend/.env
+npm ci
 npm test
 npm start
 ```
@@ -160,6 +168,7 @@ Push commit lên repo để Vercel cập nhật FE. Trên EC2, từ folder repo:
 
 ```bash
 git pull --ff-only
+npm ci
 npm test
 sudo systemctl restart cloud-demo
 curl https://aws.artium.id.vn/api/health
@@ -167,11 +176,88 @@ curl https://aws.artium.id.vn/api/health
 
 `.env` và key `.pem` đã nằm trong `.gitignore`. Cấu hình frontend là public: chỉ đặt địa chỉ API, không đặt password hoặc API key trong `frontend/config.js`.
 
+## Tích hợp S3 vào web demo
+
+Luồng: **trình duyệt → API HTTPS trên EC2 → S3** để lấy danh sách hoặc ký link. Khi mở link, **trình duyệt → S3** trực tiếp. Caddy tiếp tục chuyển HTTPS vào Node.js tại `127.0.0.1:3000`; không cần đổi DNS iNET hoặc cài lại Caddy.
+
+1. Trong S3, mở bucket **`artium-cloud-demo-thinh-20261005`**, tạo folder **`demo`**, upload file mẫu vào đó, ví dụ `demo/hello.txt` hoặc `demo/anh-demo.png`. Giữ **Block Public Access bật**, không bật public ACL. Chỉ đặt file có thể chia sẻ ở đây: API demo không yêu cầu đăng nhập và có thể cấp link cho bất kỳ file nào trong `demo/`.
+2. Trong EC2 → instance → Actions → Security → Modify IAM role, kiểm tra role **`ArtiumCloudDemoEC2`** đã gắn vào instance. Role cần `s3:ListBucket` và `s3:GetObject`. AWS SDK tự lấy credentials từ role; không dùng `aws configure` hoặc thêm access key vào `.env` trên EC2.
+3. Policy đọc toàn bộ bucket đã dùng trong bài terminal cũng hoạt động. Có thể thu hẹp policy **`ArtiumDemoS3Read`** cho web demo như sau (bài terminal liệt kê toàn bộ bucket sẽ cần đổi sang `Prefix: "demo/"`):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::artium-cloud-demo-thinh-20261005",
+      "Condition": { "StringEquals": { "s3:prefix": "demo/" } }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::artium-cloud-demo-thinh-20261005/demo/*"
+    }
+  ]
+}
+```
+
+4. Sau khi merge nhánh vào `main`, cập nhật trên **Terminal SSH Ubuntu**, trong repo:
+
+```bash
+cd ~/cloud-services-demo
+git switch main
+git pull --ff-only origin main
+npm ci
+npm test
+nano backend/.env
+```
+
+Giữ `HOST`, `PORT` và `ALLOWED_ORIGINS` hiện có; thêm hoặc cập nhật hai dòng, không tạo dòng trùng:
+
+```dotenv
+AWS_REGION=ap-southeast-1
+S3_BUCKET=artium-cloud-demo-thinh-20261005
+```
+
+Trong nano: Ctrl+O → Enter để lưu, Ctrl+X để thoát. Sau đó:
+
+```bash
+sudo systemctl restart cloud-demo
+sudo systemctl status cloud-demo --no-pager
+curl --max-time 15 https://aws.artium.id.vn/api/health
+curl --max-time 15 https://aws.artium.id.vn/api/files
+```
+
+Service có thể mất vài giây nạp NVM sau restart. Không chạy thêm `npm start` khi `cloud-demo` đang dùng cổng 3000. Nếu cần xem lỗi:
+
+```bash
+sudo journalctl -u cloud-demo -n 50 --no-pager
+```
+
+5. Vercel tự deploy FE từ `main` sau merge, với Root Directory **`frontend`** như cũ. Đợi deployment **Ready**, mở **https://demo.artium.id.vn**, bấm **Xem file S3 → Mở file**. Tab mới mở file S3; nếu trình duyệt chặn popup, bấm **Link tải (5 phút)** trong danh sách. Hết hạn thì bấm **Mở file** để tạo link mới.
+
+API list chỉ đọc trang đầu tối đa 10 object, bỏ folder marker; vì vậy có thể thấy ít hơn 10 file. `truncated: true` nghĩa là còn object chưa hiển thị. Không có phân trang trong bài demo này. Link có hiệu lực tối đa 5 phút, và có thể hết hạn sớm nếu credentials của role hết hạn hoặc quyền/file bị thay đổi. Không cần bật S3 CORS để mở file qua link trong tab mới; frontend không fetch nội dung file S3.
+
+Lỗi thường gặp: **503** nếu thiếu `S3_BUCKET`; **502** nếu sai region/bucket, thiếu IAM permission hoặc AWS không phản hồi; **400** nếu key nằm ngoài `demo/` hoặc không hợp lệ. S3 có thể trả **403** cho file không tồn tại khi policy giới hạn quyền liệt kê; backend sẽ trả 502 trong trường hợp đó. File trả 404 từ S3 được chuyển thành 404 trên API download.
+
+### Ảnh minh chứng cho phần S3
+
+- `[CHÈN ẢNH S3-1 — Bucket và file nằm trong folder demo/, Block Public Access bật]`
+- `[CHÈN ẢNH S3-2 — IAM role ArtiumCloudDemoEC2 gắn vào instance, quyền đọc bucket]`
+- `[CHÈN ẢNH S3-3 — Terminal: npm test PASS và curl /api/files trả danh sách thật]`
+- `[CHÈN ẢNH S3-4 — Web demo hiển thị danh sách file và JSON của GET /api/files]`
+- `[CHÈN ẢNH S3-5 — Tab mở file từ S3 bằng presigned URL; che phần query chữ ký khi chia sẻ ảnh]`
+
+Tài liệu: [AWS SDK credentials cho Node.js](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-credentials-node.html), [ListObjectsV2](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html), [S3 presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html).
+
 ## Bài demo hoàn tất khi
 
 - `https://aws.artium.id.vn/api/health` trả JSON status `ok`.
 - `https://demo.artium.id.vn` báo API đã kết nối.
 - Gửi tên nhận đúng lời chào; JSON được hiển thị trong phần mở rộng.
+- Xem được file trong `demo/` từ bucket S3 thật và mở file bằng link có chữ ký.
 - Tắt backend để thử trạng thái lỗi, bật lại rồi bấm Kiểm tra kết nối.
 
-Backend chưa có database/auth vì bài này tập trung HTTP, CORS, EC2, DNS và HTTPS. Chỉ thêm lưu trữ hoặc đăng nhập khi bài tiếp theo cần đến chúng.
+Backend chưa có database/auth vì bài này tập trung HTTP, CORS, EC2, DNS, HTTPS và S3. Chỉ thêm đăng nhập hoặc lưu dữ liệu người dùng khi bài tiếp theo cần đến chúng.

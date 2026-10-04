@@ -3,10 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=backend/.env backend/server.mjs",
     "dev": "node --watch --env-file-if-exists=backend/.env backend/server.mjs",
-    "test": "node backend/check.mjs"
+    "test": "node backend/check.mjs && node backend/check-s3.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1146.0",
+    "@aws-sdk/s3-request-presigner": "^3.1146.0"
   }
 }
