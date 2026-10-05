@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Demo Node.js API</title>
+  <title>Artium Cloud Demo</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./style.css">
   <script src="./config.js" defer></script>
@@ -11,8 +11,8 @@
 </head>
 <body>
   <main>
-    <h1>Demo Node.js API</h1>
-    <p>Frontend gửi request đến backend để kiểm tra kết nối và nhận lời chào.</p>
+    <h1>Artium Cloud Demo</h1>
+    <p>Thử S3, SNS, SES, EFS và Lex V2 qua backend Node.js trên EC2.</p>
     <p>API: <code id="api-url"></code></p>
     <p id="environment-note"></p>
 
@@ -39,6 +39,62 @@
       <button id="files-button" type="button">Xem file S3</button>
       <p id="files-status" role="status">Chưa tải danh sách file.</p>
       <ul id="files-list"></ul>
+    </section>
+
+    <section aria-labelledby="access-title">
+      <h2 id="access-title">Mã truy cập demo</h2>
+      <label for="demo-token">Mã demo được cấu hình trên EC2</label>
+      <input id="demo-token" type="password" autocomplete="off" spellcheck="false" aria-describedby="token-hint">
+      <p id="token-hint">Nhập mã để dùng SNS, SES, EFS và Lex. Mã chỉ giữ trong trang đang mở.</p>
+      <p id="services-status" role="status">Kiểm tra kết nối để xem cấu hình các dịch vụ.</p>
+    </section>
+
+    <section aria-labelledby="sns-title">
+      <h2 id="sns-title">SNS — phát thông báo</h2>
+      <p>Gửi tới topic demo; người nhận cần xác nhận subscription email trước.</p>
+      <form id="sns-form">
+        <label for="sns-message">Nội dung thông báo</label>
+        <textarea id="sns-message" name="message" required maxlength="2000" rows="3">Xin chào từ web demo SNS!</textarea>
+        <button type="submit">Gửi SNS</button>
+      </form>
+      <p id="sns-status" role="status">Chưa gửi thông báo.</p>
+    </section>
+
+    <section aria-labelledby="ses-title">
+      <h2 id="ses-title">SES — gửi email từ ứng dụng</h2>
+      <p>Email gửi và nhận được cấu hình cố định trên backend. Phần này cần verify email trong SES trước khi dùng.</p>
+      <form id="ses-form">
+        <label for="ses-message">Nội dung email</label>
+        <textarea id="ses-message" name="message" required maxlength="2000" rows="3">Xin chào từ web demo SES!</textarea>
+        <button type="submit">Gửi email SES</button>
+      </form>
+      <p id="ses-status" role="status">Chưa gửi email.</p>
+    </section>
+
+    <section aria-labelledby="efs-title">
+      <h2 id="efs-title">EFS — ghi và đọc file</h2>
+      <p>Lưu nội dung vào <code>web-demo.txt</code> trên EFS. Mỗi lần ghi thay nội dung file demo này.</p>
+      <form id="efs-form">
+        <label for="efs-content">Nội dung file</label>
+        <textarea id="efs-content" name="content" required maxlength="2000" rows="4">Xin chào từ web demo EFS!</textarea>
+        <button type="submit">Ghi file EFS</button>
+        <button id="efs-read" type="button">Đọc lại từ EFS</button>
+      </form>
+      <p id="efs-status" role="status">Chưa đọc/ghi file.</p>
+      <pre id="efs-output" aria-label="Nội dung đọc từ EFS"></pre>
+    </section>
+
+    <section aria-labelledby="lex-title">
+      <h2 id="lex-title">Lex V2 — chat đặt tranh</h2>
+      <p>Bắt đầu bằng <code>I want to order a painting</code>, trả lời tên tranh, số lượng rồi <code>yes</code> hoặc <code>no</code>. Bot demo chưa tạo đơn hàng.</p>
+      <button id="lex-new" type="button">Hội thoại mới</button>
+      <ol id="lex-messages" role="log" aria-live="polite" aria-label="Hội thoại với Lex"></ol>
+      <form id="lex-form">
+        <label for="lex-text">Tin nhắn (English)</label>
+        <input id="lex-text" name="text" required maxlength="1024" autocomplete="off">
+        <button type="submit">Gửi tới Lex</button>
+      </form>
+      <p id="lex-status" role="status">Chưa bắt đầu hội thoại.</p>
     </section>
 
     <section aria-labelledby="response-title">

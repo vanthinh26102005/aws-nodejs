@@ -15,6 +15,7 @@ section { margin-top: 28px; }
 label { display: block; margin-bottom: 6px; }
 input { width: 100%; max-width: 320px; }
 input, button { font: inherit; padding: 6px 8px; }
+textarea { display: block; width: 100%; font: inherit; padding: 6px 8px; margin-bottom: 8px; }
 button { cursor: pointer; }
 button:disabled { cursor: wait; }
 code, pre { overflow-wrap: anywhere; }
@@ -23,3 +24,6 @@ summary { cursor: pointer; }
 #files-list { padding-left: 20px; }
 #files-list li { margin-bottom: 12px; overflow-wrap: anywhere; }
 #files-list button, #files-list a { margin-left: 8px; }
+#lex-messages { padding-left: 24px; max-height: 360px; overflow-y: auto; }
+#lex-messages li { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+#efs-output { background: #f5f5f5; padding: 12px; }

@@ -9,10 +9,13 @@
   "scripts": {
     "start": "node --env-file-if-exists=backend/.env backend/server.mjs",
     "dev": "node --watch --env-file-if-exists=backend/.env backend/server.mjs",
-    "test": "node backend/check.mjs && node backend/check-s3.mjs"
+    "test": "node backend/check.mjs && node backend/check-s3.mjs && node backend/check-cloud.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-lex-runtime-v2": "^3.1146.0",
     "@aws-sdk/client-s3": "^3.1146.0",
+    "@aws-sdk/client-ses": "^3.1146.0",
+    "@aws-sdk/client-sns": "^3.1146.0",
     "@aws-sdk/s3-request-presigner": "^3.1146.0"
   }
 }
