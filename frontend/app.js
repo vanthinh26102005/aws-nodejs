@@ -61,6 +61,11 @@ async function checkConnection() {
   json.textContent = "Đang chờ API…";
   try {
     const data = await request("/api/health");
+    const services = data.services || {};
+    document.querySelector("#services-status").textContent =
+      ["sns", "ses", "efs", "lex"].map(service =>
+        `${service.toUpperCase()}: ${services[service] ? "đã cấu hình" : "chưa cấu hình"}`
+      ).join(" · ") + ". Trạng thái này chưa kiểm tra kết nối AWS thực tế.";
     setConnection("connected", "API đã kết nối");
     message.textContent = `Backend đang hoạt động với Node.js ${data.nodeVersion}. Sẵn sàng nhận lời chào của bạn.`;
     document.querySelector("#last-check").textContent =
@@ -179,6 +184,93 @@ filesButton.addEventListener("click", async () => {
     message.textContent = error.message;
   } finally {
     filesButton.disabled = false;
+  }
+});
+async function cloudRequest(path, body) {
+  const token = document.querySelector("#demo-token").value;
+  if (token.length < 32) throw new Error("Nhập mã demo (ít nhất 32 ký tự) ở phần Mã truy cập demo.");
+  return request(path, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { "Content-Type": "application/json", "X-Demo-Token": token },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+for (const service of ["sns", "ses"]) {
+  const form = document.querySelector(`#${service}-form`);
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = form.querySelector("button");
+    const status = document.querySelector(`#${service}-status`);
+    button.disabled = true;
+    status.textContent = "Đang gửi…";
+    try {
+      const data = await cloudRequest(`/api/${service}`, { message: form.elements.message.value });
+      status.textContent = `${data.message} Message ID: ${data.messageId}`;
+      message.textContent = data.message;
+    } catch (error) { status.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
+}
+
+const efsForm = document.querySelector("#efs-form");
+async function useEfs(write) {
+  const buttons = efsForm.querySelectorAll("button");
+  buttons.forEach(button => { button.disabled = true; });
+  const status = document.querySelector("#efs-status");
+  status.textContent = write ? "Đang ghi EFS…" : "Đang đọc EFS…";
+  try {
+    const data = await cloudRequest("/api/efs", write ? { content: efsForm.elements.content.value } : undefined);
+    status.textContent = data.message;
+    document.querySelector("#efs-output").textContent = data.content;
+    message.textContent = data.message;
+  } catch (error) { status.textContent = error.message; }
+  finally { buttons.forEach(button => { button.disabled = false; }); }
+}
+efsForm.addEventListener("submit", event => { event.preventDefault(); useEfs(true); });
+document.querySelector("#efs-read").addEventListener("click", () => useEfs(false));
+
+let lexSessionId = crypto.randomUUID();
+const lexForm = document.querySelector("#lex-form");
+const lexMessages = document.querySelector("#lex-messages");
+const lexStatus = document.querySelector("#lex-status");
+const lexNew = document.querySelector("#lex-new");
+function addChatMessage(who, text) {
+  const item = document.createElement("li");
+  item.textContent = `${who}: ${text}`;
+  lexMessages.append(item);
+  lexMessages.scrollTop = lexMessages.scrollHeight;
+}
+lexNew.addEventListener("click", () => {
+  lexSessionId = crypto.randomUUID();
+  lexMessages.replaceChildren();
+  lexStatus.textContent = "Đã bắt đầu hội thoại mới.";
+  lexForm.elements.text.value = "";
+  lexForm.elements.text.focus();
+});
+lexForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  const input = lexForm.elements.text;
+  const text = input.value.trim();
+  if (!text) return;
+  const button = lexForm.querySelector("button");
+  button.disabled = true;
+  lexNew.disabled = true;
+  lexStatus.textContent = "Lex đang trả lời…";
+  addChatMessage("Bạn", text);
+  input.value = "";
+  try {
+    const data = await cloudRequest("/api/lex", { text, sessionId: lexSessionId });
+    for (const reply of data.messages) addChatMessage("Bot", reply.content);
+    lexStatus.textContent = `Intent: ${data.intent?.name || "—"} · State: ${data.intent?.state || "—"} · Slot cần hỏi: ${data.slotToElicit || "—"} · Confidence: ${data.confidence ?? "—"}`;
+    message.textContent = "Lex đã trả lời; mở JSON để xem slots và trạng thái xác nhận.";
+  } catch (error) {
+    lexStatus.textContent = error.message;
+    addChatMessage("Lỗi", error.message);
+  } finally {
+    button.disabled = false;
+    lexNew.disabled = false;
+    input.focus();
   }
 });
 checkConnection();

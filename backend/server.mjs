@@ -7,6 +7,7 @@ import {
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { cloudRoutes, createCloudDemo } from "./cloud.mjs";
 
 // These objects are intentionally shareable through the public demo API.
 // CORS is not authentication; keep private files outside demo/.
@@ -44,7 +45,9 @@ export function createDemoServer({
   s3Client = new S3Client({
     region: process.env.AWS_REGION || "ap-southeast-1",
   }),
+  ...cloudOptions
 } = {}) {
+  const cloud = createCloudDemo(cloudOptions);
   const server = createServer(async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -66,12 +69,12 @@ export function createDemoServer({
       res
         .writeHead(204, {
           "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Headers": "Content-Type, X-Demo-Token",
         })
         .end();
       return;
     }
-    const method =
+    const method = cloudRoutes[pathname] || [
       pathname === "/api/greet"
         ? "POST"
         : pathname === "/api/health" ||
@@ -79,12 +82,14 @@ export function createDemoServer({
             pathname === "/api/files/download" ||
             assets[pathname]
           ? "GET"
-          : null;
-    if (!method) return send(404, { error: "Không tìm thấy endpoint." });
-    if (req.method !== method) {
-      res.setHeader("Allow", method);
-      return send(405, { error: `Endpoint này chỉ nhận ${method}.` });
+          : null,
+    ];
+    if (!method[0]) return send(404, { error: "Không tìm thấy endpoint." });
+    if (!method.includes(req.method)) {
+      res.setHeader("Allow", method.join(", "));
+      return send(405, { error: `Endpoint này chỉ nhận ${method.join(", ")}.` });
     }
+    if (cloudRoutes[pathname] && !cloud.authorize(req, send)) return;
 
     try {
       if (assets[pathname]) {
@@ -104,8 +109,11 @@ export function createDemoServer({
           nodeVersion: process.version,
           uptimeSeconds: Math.floor(process.uptime()),
           timestamp: new Date().toISOString(),
+          services: cloud.configured,
         });
       }
+      if (pathname === "/api/efs" && req.method === "GET")
+        return await cloud.handle(pathname, req.method, null, send);
       if (pathname === "/api/files" || pathname === "/api/files/download") {
         if (!bucket)
           return send(503, { error: "Chưa cấu hình S3_BUCKET trên backend." });
@@ -181,6 +189,11 @@ export function createDemoServer({
         body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
       } catch {
         return send(400, { error: "JSON không hợp lệ." });
+      }
+      if (cloudRoutes[pathname]) {
+        if (!body || Array.isArray(body) || typeof body !== "object")
+          return send(400, { error: "Body phải là JSON object." });
+        return await cloud.handle(pathname, req.method, body, send);
       }
       if (
         !body ||

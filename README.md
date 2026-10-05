@@ -1,6 +1,8 @@
 # Artium Cloud Lab
 
-Một folder để push lên một repo: backend Node.js trên EC2, frontend HTML/CSS/JS trên Vercel. Demo kiểm tra API, gửi tên để nhận lời chào và đọc file mẫu từ S3. Không lưu tên, không có database. Backend dùng AWS SDK để đọc S3 và tạo link có chữ ký; frontend vẫn là HTML/CSS/JS thuần.
+Backend Node.js trên EC2, frontend HTML/CSS/JS trên Vercel. Demo kiểm tra API, gửi lời chào, mở file S3, phát thông báo SNS, gửi email SES, ghi/đọc file EFS và chat đặt tranh qua Lex V2. Chưa có database hoặc tạo đơn hàng thật. Frontend vẫn là HTML/CSS/JS thuần.
+
+**Đã có EC2 đang chạy?** Xem [hướng dẫn pull code, cấu hình dịch vụ và restart](docs/EC2-UPDATE.md). SES đã có code nhưng cần verify email rồi mới bật cấu hình sender.
 
 ```text
 cloud-services-demo/
@@ -8,8 +10,10 @@ cloud-services-demo/
 ├── package-lock.json
 ├── backend/
 │   ├── server.mjs
+│   ├── cloud.mjs
 │   ├── check.mjs
 │   ├── check-s3.mjs
+│   ├── check-cloud.mjs
 │   └── .env.example
 ├── frontend/
 │   ├── index.html
@@ -46,7 +50,7 @@ npm run dev
 npm test
 ```
 
-`dev` tự khởi động lại backend khi code thay đổi; refresh trình duyệt để nhận FE mới. `test` dùng HTTP thật trên port tạm, kiểm tra API, JSON/tên sai, body quá lớn, CORS, method, đường dẫn và các asset frontend. Phần S3 thay lời gọi AWS bằng dữ liệu giả lập, kiểm tra giới hạn prefix, key sai, bucket rỗng, lỗi AWS và link được ký bằng AWS SDK. Test không cần AWS credentials và không chứng minh kết nối bucket thật.
+`dev` tự khởi động lại backend khi code thay đổi; refresh trình duyệt để nhận FE mới. `test` dùng HTTP thật trên port tạm, kiểm tra API, validation, body limit, CORS và frontend assets. Test S3 kiểm tra prefix và ký URL bằng SDK. Test các dịch vụ mới dùng filesystem tạm thật, thay lời gọi AWS và phép kiểm tra mount bằng fixture; kiểm tra auth, đích gửi cố định, gửi lặp, EFS chưa mount/symlink và session Lex. Test không cần AWS credentials, không gửi email thật và không chứng minh kết nối tài nguyên AWS thật.
 
 Local chưa có `S3_BUCKET` vẫn chạy lời chào bình thường; nút S3 báo chưa cấu hình. Muốn thử với S3 thật trên Mac cần cấu hình AWS credentials hợp lệ qua AWS CLI/profile. Trên EC2 dùng IAM role như phần S3 bên dưới.
 
@@ -58,6 +62,15 @@ Local chưa có `S3_BUCKET` vẫn chạy lời chào bình thường; nút S3 b�
 | `POST /api/greet` | JSON `{"name":"Thịnh"}` | Lời chào và timestamp |
 | `GET /api/files` | Không có body | Tối đa 10 file trong `demo/`, size, lastModified, truncated |
 | `GET /api/files/download?key=demo/ten-file.png` | Key URL-encoded | Link S3 có chữ ký, expiresIn = 300 giây |
+| `POST /api/sns` | `{"message":"Xin chào"}` | SNS nhận publish, trả messageId |
+| `POST /api/ses` | `{"message":"Email demo"}` | SES nhận yêu cầu gửi, trả messageId |
+| `POST /api/efs` | `{"content":"File demo"}` | Ghi thay nội dung web-demo.txt trên EFS |
+| `GET /api/efs` | Không có body | Đọc web-demo.txt trên EFS |
+| `POST /api/lex` | `{"text":"hello","sessionId":"demo-session"}` | Câu trả lời, intent/slots/state, slot cần hỏi và confidence |
+
+Bốn nhóm endpoint mới cần header `X-Demo-Token`, bằng `DEMO_WRITE_TOKEN` ít nhất 32 ký tự trên EC2. Mã được nhập vào ô password trên web, không nằm trong frontend config hoặc localStorage. Các API mới giới hạn chung 60 request/phút/instance; SNS và SES cách nhau ít nhất 10 giây cho mỗi dịch vụ. SDK không tự retry các yêu cầu mới để giảm gửi trùng. Nếu timeout, kiểm tra inbox trước khi gửi lại; với Lex có thể bắt đầu hội thoại mới.
+
+SNS topic, SES sender/recipient và Lex bot/alias do backend cấu hình; client không được chọn tài nguyên hoặc người nhận khác. EFS chỉ đọc/ghi một file demo, kiểm tra filesystem NFS trước khi thao tác và không đọc qua symlink. Đây là một demo một instance, mã dùng chung; chưa có tài khoản, quyền theo người dùng hoặc bảo đảm gửi đúng một lần.
 
 ```bash
 curl http://localhost:3000/api/health
